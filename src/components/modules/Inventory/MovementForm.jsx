@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,7 +48,7 @@ const MovementForm = ({ isOpen, onOpenChange, onSubmit, products }) => {
               </SelectTrigger>
               <SelectContent>
                 {products.map(product => (
-                  <SelectItem key={product.id} value={product.id}>
+                  <SelectItem key={product.id} value={String(product.id)}>
                     {product.nombre} (Stock: {product.cantidad_actual})
                   </SelectItem>
                 ))}

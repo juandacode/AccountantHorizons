@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Package, TrendingUp, TrendingDown } from 'lucide-react';
+import { Package, TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from '@/components/ui/use-toast';
 import { useSupabase } from '@/integrations/supabase/SupabaseProvider';
 import ProductForm from '@/components/modules/Inventory/ProductForm';
@@ -11,94 +9,105 @@ import MovementForm from '@/components/modules/Inventory/MovementForm';
 import ProductList from '@/components/modules/Inventory/ProductList';
 import RecentMovements from '@/components/modules/Inventory/RecentMovements';
 import LowStockAlert from '@/components/modules/Inventory/LowStockAlert';
-
+import { useConfirmationDialog } from '@/components/providers/ConfirmationDialogProvider';
 
 const Inventory = () => {
-  const { supabase } = useSupabase();
-  const [products, setProducts] = useLocalStorage('products_local', []);
-  const [movements, setMovements] = useLocalStorage('inventory_movements_local', []);
+  const { supabase, loading: supabaseLoading, error: supabaseError } = useSupabase();
+  const { confirm } = useConfirmationDialog();
+  const [products, setProducts] = useState([]);
+  const [movements, setMovements] = useState([]);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (!supabase) {
-        console.warn("Supabase client not available in Inventory for products. Integration might be incomplete.");
-        return;
-      }
-      const { data, error } = await supabase.from('productos').select('*').order('nombre');
-      if (error) {
-        toast({ title: "Error", description: "No se pudieron cargar los productos.", variant: "destructive" });
-      } else {
-        setProducts(data);
-      }
-    };
-    const fetchMovements = async () => {
-      if (!supabase) {
-        console.warn("Supabase client not available in Inventory for movements. Integration might be incomplete.");
-        return;
-      }
-      const { data, error } = await supabase.from('movimientos_inventario').select('*, productos(nombre)').order('fecha_movimiento', { ascending: false }).limit(10);
-      if (error) {
-        toast({ title: "Error", description: "No se pudieron cargar los movimientos.", variant: "destructive" });
-      } else {
-        setMovements(data.map(m => ({...m, productName: m.productos?.nombre || 'N/A'})));
-      }
-    };
+  const fetchProducts = async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase.from('productos').select('*').order('nombre');
+    if (error) {
+      toast({ title: "Error", description: "No se pudieron cargar los productos: " + error.message, variant: "destructive" });
+    } else {
+      setProducts(data || []);
+    }
+  };
 
-    fetchProducts();
-    fetchMovements();
-  }, [supabase, setProducts, setMovements]);
+  const fetchMovements = async () => {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from('movimientos_inventario')
+      .select('*, productos(nombre)')
+      .order('fecha_movimiento', { ascending: false })
+      .limit(10);
+    if (error) {
+      toast({ title: "Error", description: "No se pudieron cargar los movimientos: " + error.message, variant: "destructive" });
+    } else {
+      setMovements((data || []).map(m => ({ ...m, productName: m.productos?.nombre || 'N/A' })));
+    }
+  };
+
+  useEffect(() => {
+    if (supabaseError && supabaseError.message.includes("environment variables")) {
+      toast({ title: "Error de Configuración de Supabase", description: supabaseError.message, variant: "destructive", duration: 10000 });
+    } else if (supabaseError) {
+       toast({ title: "Error de Conexión Supabase", description: "No se pudo conectar con Supabase. " + supabaseError.message, variant: "destructive", duration: 10000 });
+    }
+  }, [supabaseError]);
+
+  useEffect(() => {
+    if (supabase && !supabaseLoading && !supabaseError) {
+      fetchProducts();
+      fetchMovements();
+    }
+  }, [supabase, supabaseLoading, supabaseError]);
 
   const handleProductSubmit = async (productData) => {
     if (!supabase) {
-      toast({ title: "Error de conexión", description: "No se puede conectar a la base de datos. Por favor, completa la integración de Supabase.", variant: "destructive" });
+      toast({ title: "Error de conexión", description: "Supabase no está disponible.", variant: "destructive" });
       return;
     }
     if (editingProduct) {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('productos')
-        .update({ ...productData, cantidad_actual: Number(productData.cantidad_actual) })
-        .eq('id', editingProduct.id)
-        .select()
-        .single();
+        .update({
+          sku: productData.sku,
+          nombre: productData.nombre,
+          descripcion: productData.descripcion,
+          costo_predeterminado: productData.costo_predeterminado,
+          precio_venta_predeterminado: productData.precio_venta_predeterminado,
+        })
+        .eq('id', editingProduct.id);
       if (error) {
         toast({ title: "Error", description: `No se pudo actualizar el producto: ${error.message}`, variant: "destructive" });
       } else {
-        setProducts(prev => prev.map(p => p.id === data.id ? data : p));
         toast({ title: "¡Producto actualizado!", description: "El producto se ha actualizado correctamente." });
       }
     } else {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('productos')
-        .insert({ ...productData, cantidad_actual: Number(productData.cantidad_actual) })
-        .select()
-        .single();
+        .insert({ ...productData, cantidad_actual: Number(productData.cantidad_actual) });
       if (error) {
         toast({ title: "Error", description: `No se pudo agregar el producto: ${error.message}`, variant: "destructive" });
       } else {
-        setProducts(prev => [data, ...prev]);
         toast({ title: "¡Producto agregado!", description: "El producto se ha registrado correctamente." });
       }
     }
     setEditingProduct(null);
     setIsProductDialogOpen(false);
+    fetchProducts();
   };
 
   const handleMovementSubmit = async (movementData) => {
-     if (!supabase) {
-      toast({ title: "Error de conexión", description: "No se puede conectar a la base de datos. Por favor, completa la integración de Supabase.", variant: "destructive" });
+    if (!supabase) {
+      toast({ title: "Error de conexión", description: "Supabase no está disponible.", variant: "destructive" });
       return;
     }
     const product = products.find(p => p.id === parseInt(movementData.producto_id));
     if (!product) {
-        toast({ title: "Error", description: "Producto no encontrado para el movimiento.", variant: "destructive" });
-        return;
+      toast({ title: "Error", description: "Producto no encontrado para el movimiento.", variant: "destructive" });
+      return;
     }
 
     const quantity = Number(movementData.cantidad);
-    const newQuantity = movementData.tipo_movimiento === 'entrada' 
+    const newQuantity = movementData.tipo_movimiento === 'entrada'
       ? product.cantidad_actual + quantity
       : product.cantidad_actual - quantity;
 
@@ -124,29 +133,19 @@ const Inventory = () => {
       return;
     }
 
-    const { data: updatedProduct, error: productUpdateError } = await supabase
+    const { error: productUpdateError } = await supabase
       .from('productos')
       .update({ cantidad_actual: newQuantity })
-      .eq('id', parseInt(movementData.producto_id))
-      .select()
-      .single();
+      .eq('id', parseInt(movementData.producto_id));
 
     if (productUpdateError) {
       toast({ title: "Error", description: `No se pudo actualizar el stock del producto: ${productUpdateError.message}`, variant: "destructive" });
     } else {
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-      const newMovementEntry = {
-        ...movementData,
-        id: Date.now(), 
-        productName: product.nombre,
-        fecha_movimiento: new Date().toISOString().split('T')[0],
-        cantidad_anterior: product.cantidad_actual,
-        cantidad_nueva: newQuantity
-      };
-      setMovements(prev => [newMovementEntry, ...prev].slice(0,10));
       toast({ title: "¡Movimiento registrado!", description: `${movementData.tipo_movimiento === 'entrada' ? 'Entrada' : 'Salida'} registrada.` });
     }
     setIsMovementDialogOpen(false);
+    fetchProducts();
+    fetchMovements();
   };
 
   const handleEdit = (product) => {
@@ -155,20 +154,48 @@ const Inventory = () => {
   };
 
   const handleDelete = async (productId) => {
+    const confirmed = await confirm({
+        title: 'Confirmar Eliminación',
+        description: '¿Estás seguro de que quieres eliminar este producto? Esta acción es irreversible y eliminará todos los datos asociados (movimientos, detalles de factura, etc.).',
+        confirmText: 'Eliminar Producto'
+    });
+    if (!confirmed) return;
+
     if (!supabase) {
-      toast({ title: "Error de conexión", description: "No se puede conectar a la base de datos. Por favor, completa la integración de Supabase.", variant: "destructive" });
+      toast({ title: "Error de conexión", description: "Supabase no está disponible.", variant: "destructive" });
       return;
     }
+    
+    await supabase.from('facturas_venta_detalles').delete().eq('producto_id', productId);
+    await supabase.from('facturas_compra_detalles').delete().eq('producto_id', productId);
+    await supabase.from('movimientos_inventario').delete().eq('producto_id', productId);
+    
     const { error } = await supabase.from('productos').delete().eq('id', productId);
     if (error) {
       toast({ title: "Error", description: `No se pudo eliminar el producto: ${error.message}`, variant: "destructive" });
     } else {
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      toast({ title: "Producto eliminado", description: "El producto se ha eliminado correctamente." });
+      toast({ title: "Producto eliminado", description: "El producto y sus datos asociados se han eliminado." });
     }
+    fetchProducts();
+    fetchMovements();
   };
 
-  const lowStockProducts = products.filter(p => p.cantidad_actual <= 5);
+  const lowStockProducts = products.filter(p => p.cantidad_actual <= 12);
+
+  if (supabaseLoading && !supabase) {
+    return <div className="flex justify-center items-center h-screen"><p className="text-xl text-pink-600 animate-pulse">Conectando a Supabase...</p></div>;
+  }
+  
+  if (supabaseError) {
+     return (
+      <div className="flex flex-col justify-center items-center h-screen p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error al Cargar Inventario</h2>
+        <p className="text-gray-700 mb-2">{supabaseError.message}</p>
+        <p className="text-gray-600">Intenta recargar la página o verifica la conexión con Supabase.</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">

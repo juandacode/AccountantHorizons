@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 
 const PurchaseInvoiceList = ({ invoices, onEdit, onDelete }) => {
+  const formatDisplayValue = (value) => {
+    return Math.round(value).toLocaleString('es');
+  };
   return (
     <Card>
       <CardHeader><CardTitle>Facturas de Compra</CardTitle></CardHeader>
@@ -37,11 +40,11 @@ const PurchaseInvoiceList = ({ invoices, onEdit, onDelete }) => {
                 >
                   <td className="p-2 font-mono text-sm">{invoice.numero_factura}</td>
                   <td className="p-2 font-medium">{invoice.supplierName || invoice.proveedores?.nombre_proveedor}</td>
-                  <td className="p-2">{invoice.fecha_emision}</td>
-                  <td className="p-2">{invoice.fecha_vencimiento}</td>
-                  <td className="p-2">${invoice.monto_total.toFixed(2)}</td>
-                  <td className="p-2">${(invoice.monto_pagado || 0).toFixed(2)}</td>
-                  <td className="p-2">${(invoice.monto_total - (invoice.monto_pagado || 0)).toFixed(2)}</td>
+                  <td className="p-2">{new Date(invoice.fecha_emision + 'T00:00:00').toLocaleDateString()}</td>
+                  <td className="p-2">{invoice.fecha_vencimiento ? new Date(invoice.fecha_vencimiento + 'T00:00:00').toLocaleDateString() : '-'}</td>
+                  <td className="p-2">${formatDisplayValue(invoice.monto_total)}</td>
+                  <td className="p-2">${formatDisplayValue(invoice.monto_pagado || 0)}</td>
+                  <td className="p-2">${formatDisplayValue(invoice.monto_total - (invoice.monto_pagado || 0))}</td>
                   <td className="p-2">{invoice.forma_pago}</td>
                   <td className="p-2">
                     <span className={`px-2 py-1 rounded-full text-sm ${ invoice.estado === 'Pagada' ? 'status-paid' : 'status-pending'}`}>

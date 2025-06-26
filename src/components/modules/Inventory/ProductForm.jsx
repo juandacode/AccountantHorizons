@@ -1,17 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Plus } from 'lucide-react';
 
 const ProductForm = ({ isOpen, onOpenChange, onSubmit, editingProduct }) => {
   const [productForm, setProductForm] = useState({
     nombre: '',
-    sku: '',
+    sku: '', // Cambiado de 'sku' a 'referencia' en la etiqueta
     descripcion: '',
-    cantidad_actual: 0
+    cantidad_actual: 0,
+    costo_predeterminado: 0,
+    precio_venta_predeterminado: 0,
   });
 
   useEffect(() => {
@@ -20,10 +21,12 @@ const ProductForm = ({ isOpen, onOpenChange, onSubmit, editingProduct }) => {
         nombre: editingProduct.nombre || '',
         sku: editingProduct.sku || '',
         descripcion: editingProduct.descripcion || '',
-        cantidad_actual: editingProduct.cantidad_actual || 0
+        cantidad_actual: editingProduct.cantidad_actual || 0,
+        costo_predeterminado: editingProduct.costo_predeterminado || 0,
+        precio_venta_predeterminado: editingProduct.precio_venta_predeterminado || 0,
       });
     } else {
-      setProductForm({ nombre: '', sku: '', descripcion: '', cantidad_actual: 0 });
+      setProductForm({ nombre: '', sku: '', descripcion: '', cantidad_actual: 0, costo_predeterminado: 0, precio_venta_predeterminado: 0 });
     }
   }, [editingProduct, isOpen]);
 
@@ -35,59 +38,91 @@ const ProductForm = ({ isOpen, onOpenChange, onSubmit, editingProduct }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+        <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
           <Plus className="h-4 w-4 mr-2" />
           {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
             {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="sku">SKU</Label>
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="sku" className="text-right">Referencia</Label>
             <Input
               id="sku"
               value={productForm.sku}
               onChange={(e) => setProductForm({...productForm, sku: e.target.value})}
+              className="col-span-3"
               required
             />
           </div>
-          <div>
-            <Label htmlFor="name">Nombre del Producto</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="nombre" className="text-right">Nombre</Label>
             <Input
-              id="name"
+              id="nombre"
               value={productForm.nombre}
               onChange={(e) => setProductForm({...productForm, nombre: e.target.value})}
+              className="col-span-3"
               required
             />
           </div>
-          <div>
-            <Label htmlFor="description">Descripción</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="descripcion" className="text-right">Descripción</Label>
             <Input
-              id="description"
+              id="descripcion"
               value={productForm.descripcion}
               onChange={(e) => setProductForm({...productForm, descripcion: e.target.value})}
+              className="col-span-3"
             />
           </div>
-          <div>
-            <Label htmlFor="currentQuantity">Cantidad Inicial</Label>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="cantidad_actual" className="text-right">Cantidad Inicial</Label>
             <Input
-              id="currentQuantity"
+              id="cantidad_actual"
               type="number"
               min="0"
               value={productForm.cantidad_actual}
-              onChange={(e) => setProductForm({...productForm, cantidad_actual: e.target.value})}
+              onChange={(e) => setProductForm({...productForm, cantidad_actual: parseInt(e.target.value) || 0})}
+              className="col-span-3"
               required
-              disabled={!!editingProduct}
+              disabled={!!editingProduct} 
             />
           </div>
-          <Button type="submit" className="w-full">
-            {editingProduct ? 'Actualizar' : 'Crear'} Producto
-          </Button>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="costo_predeterminado" className="text-right">Costo Predet.</Label>
+            <Input
+              id="costo_predeterminado"
+              type="number"
+              min="0"
+              step="0.01"
+              value={productForm.costo_predeterminado}
+              onChange={(e) => setProductForm({...productForm, costo_predeterminado: parseFloat(e.target.value) || 0})}
+              className="col-span-3"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="precio_venta_predeterminado" className="text-right">Precio Venta</Label>
+            <Input
+              id="precio_venta_predeterminado"
+              type="number"
+              min="0"
+              step="0.01"
+              value={productForm.precio_venta_predeterminado}
+              onChange={(e) => setProductForm({...productForm, precio_venta_predeterminado: parseFloat(e.target.value) || 0})}
+              className="col-span-3"
+              required
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
+              {editingProduct ? 'Actualizar Producto' : 'Crear Producto'}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

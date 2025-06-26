@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 
 const ProductList = ({ products, onEdit, onDelete }) => {
+  const formatDisplayValue = (value) => {
+    return value != null ? Math.round(value).toLocaleString('es') : '-';
+  };
   return (
     <Card>
       <CardHeader>
@@ -16,10 +18,12 @@ const ProductList = ({ products, onEdit, onDelete }) => {
           <table className="w-full">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2">SKU</th>
+                <th className="text-left p-2">Referencia</th>
                 <th className="text-left p-2">Nombre</th>
                 <th className="text-left p-2">Descripción</th>
                 <th className="text-left p-2">Stock Actual</th>
+                <th className="text-left p-2">Costo Predet.</th>
+                <th className="text-left p-2">Precio Venta</th>
                 <th className="text-left p-2">Acciones</th>
               </tr>
             </thead>
@@ -45,6 +49,8 @@ const ProductList = ({ products, onEdit, onDelete }) => {
                       {product.cantidad_actual}
                     </span>
                   </td>
+                  <td className="p-2 text-right">{formatDisplayValue(product.costo_predeterminado)}</td>
+                  <td className="p-2 text-right">{formatDisplayValue(product.precio_venta_predeterminado)}</td>
                   <td className="p-2">
                     <div className="flex space-x-2">
                       <Button

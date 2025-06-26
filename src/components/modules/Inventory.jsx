@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Package, TrendingUp, TrendingDown, Edit, Trash2 } from 'lucide-react';
